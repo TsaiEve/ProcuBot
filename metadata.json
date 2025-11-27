@@ -1,0 +1,5 @@
+{
+  "name": "Procurement Pro Chat",
+  "description": "An AI-powered chatbot that acts as a professional procurement tutor, offering expert advice on everything from basic definitions to complex negotiation scenarios using the Gemini API.",
+  "requestFramePermissions": []
+}
