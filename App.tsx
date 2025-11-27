@@ -47,7 +47,8 @@ const App: React.FC = () => {
             const stream = await chat.sendMessageStream({ message: text });
             let streamedText = '';
             for await (const chunk of stream) {
-                streamedText += chunk.text;
+                const chunkText = chunk.text || '';
+                streamedText += chunkText;
                 setMessages(prev => prev.map(msg => 
                     msg.id === botMessageId ? { ...msg, text: streamedText } : msg
                 ));
