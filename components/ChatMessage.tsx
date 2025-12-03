@@ -1,12 +1,14 @@
+
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import type { ChatMessage } from '../types';
+import type { ChatMessage, Language } from '../types';
 import { MessageRole } from '../types';
 import LoadingSpinner from './LoadingSpinner';
 
 interface ChatMessageProps {
   message: ChatMessage;
+  language: Language;
 }
 
 const BotIcon: React.FC = () => (
@@ -47,7 +49,7 @@ const UserIcon: React.FC = () => (
     </div>
 );
 
-const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) => {
+const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message, language }) => {
     const isModel = message.role === MessageRole.MODEL;
     
     const messageContainerClasses = isModel
@@ -62,8 +64,28 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message }) => {
         <div className={messageContainerClasses}>
             {isModel && <BotIcon />}
             <div className={messageBubbleClasses}>
+                {message.attachment && message.attachment.type === 'image' && (
+                    <div className="mb-3">
+                        <img 
+                            src={message.attachment.url} 
+                            alt="User upload" 
+                            className="rounded-lg max-h-64 object-cover border border-white/20"
+                        />
+                    </div>
+                )}
+                
+                {message.attachment && message.attachment.type === 'audio' && (
+                    <div className="mb-3 flex items-center gap-2 bg-black/20 p-2 rounded-lg">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                            <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                        </svg>
+                        <span className="text-sm opacity-90">{language === 'en' ? 'Voice Message' : '語音訊息'}</span>
+                    </div>
+                )}
+
                 <div className="prose prose-invert prose-sm max-w-none prose-p:text-text-primary prose-headings:text-white prose-strong:text-white prose-a:text-accent hover:prose-a:text-cyan-300 prose-code:text-slate-300 prose-code:bg-surface prose-code:rounded-md prose-code:px-1.5 prose-code:py-1 prose-li:marker:text-text-secondary">
-                    {message.text === '' ? <LoadingSpinner /> : (
+                    {message.text === '' && !message.attachment ? <LoadingSpinner /> : (
                         <ReactMarkdown remarkPlugins={[remarkGfm]}>
                             {message.text}
                         </ReactMarkdown>
