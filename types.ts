@@ -7,10 +7,11 @@ export enum MessageRole {
 export type Language = 'en' | 'zh-TW';
 
 export interface ChatAttachment {
-  type: 'image' | 'audio';
-  url: string; // Data URL for display/playback
-  mimeType: string; // e.g. 'image/jpeg', 'audio/wav'
-  base64Data?: string; // Raw base64 for API (optional storage)
+  type: 'image' | 'audio' | 'document';
+  url?: string; // Data URL for display/playback (optional for documents)
+  mimeType: string; // e.g. 'application/pdf'
+  base64Data?: string; // Raw base64 for API
+  fileName?: string; // Name of the file for display
 }
 
 export interface ChatMessage {

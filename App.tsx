@@ -35,7 +35,7 @@ const App: React.FC = () => {
         }
     }, [messages]);
 
-    const handleSendMessage = async (text: string, attachment?: { mimeType: string; data: string; type: 'image' | 'audio' }) => {
+    const handleSendMessage = async (text: string, attachment?: { mimeType: string; data: string; type: 'image' | 'audio' | 'document'; fileName?: string }) => {
         if (!chat || isLoading) return;
         if (!text.trim() && !attachment) return;
 
@@ -47,7 +47,8 @@ const App: React.FC = () => {
             attachment: attachment ? {
                 type: attachment.type,
                 mimeType: attachment.mimeType,
-                url: `data:${attachment.mimeType};base64,${attachment.data}`
+                url: attachment.type === 'document' ? '' : `data:${attachment.mimeType};base64,${attachment.data}`,
+                fileName: attachment.fileName
             } : undefined
         };
 

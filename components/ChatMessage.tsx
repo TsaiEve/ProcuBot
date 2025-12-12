@@ -64,6 +64,7 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message, language })
         <div className={messageContainerClasses}>
             {isModel && <BotIcon />}
             <div className={messageBubbleClasses}>
+                {/* Image Attachment */}
                 {message.attachment && message.attachment.type === 'image' && (
                     <div className="mb-3">
                         <img 
@@ -74,13 +75,37 @@ const ChatMessageComponent: React.FC<ChatMessageProps> = ({ message, language })
                     </div>
                 )}
                 
+                {/* Audio Attachment */}
                 {message.attachment && message.attachment.type === 'audio' && (
-                    <div className="mb-3 flex items-center gap-2 bg-black/20 p-2 rounded-lg">
+                    <div className="mb-3 flex items-center gap-2 bg-black/20 p-3 rounded-lg border border-white/10">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                             <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
                             <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
                         </svg>
                         <span className="text-sm opacity-90">{language === 'en' ? 'Voice Message' : '語音訊息'}</span>
+                    </div>
+                )}
+
+                {/* Document Attachment */}
+                {message.attachment && message.attachment.type === 'document' && (
+                    <div className="mb-3 flex items-center gap-3 bg-white/10 p-3 rounded-lg border border-white/10 backdrop-blur-sm">
+                        <div className="p-2 bg-white/20 rounded">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="16" y1="13" x2="8" y2="13"></line>
+                                <line x1="16" y1="17" x2="8" y2="17"></line>
+                                <polyline points="10 9 9 9 8 9"></polyline>
+                            </svg>
+                        </div>
+                        <div className="flex flex-col overflow-hidden">
+                            <span className="text-sm font-semibold truncate max-w-[200px]" title={message.attachment.fileName}>
+                                {message.attachment.fileName || (language === 'en' ? 'Document' : '文件')}
+                            </span>
+                            <span className="text-xs opacity-70 uppercase">
+                                {message.attachment.mimeType.split('/').pop()?.split('.').pop()}
+                            </span>
+                        </div>
                     </div>
                 )}
 
