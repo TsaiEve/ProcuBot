@@ -18,5 +18,5 @@ export interface ChatMessage {
   id: number;
   role: MessageRole;
   text: string;
-  attachment?: ChatAttachment;
+  attachments?: ChatAttachment[]; // Changed from single attachment to array
 }

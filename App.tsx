@@ -2,17 +2,23 @@
 import React, { useState, useEffect, useRef } from 'react';
 import type { Chat } from '@google/genai';
 import { createChatSession } from './services/geminiService';
-import type { ChatMessage as ChatMessageType, Language } from './types';
+import type { ChatMessage as ChatMessageType, Language, ChatAttachment } from './types';
 import { MessageRole } from './types';
 import Header from './components/Header';
 import ChatMessage from './components/ChatMessage';
 import ChatInput from './components/ChatInput';
+import ImagePreviewModal from './components/ImagePreviewModal';
 
 const App: React.FC = () => {
     const [chat, setChat] = useState<Chat | null>(null);
     const [messages, setMessages] = useState<ChatMessageType[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [language, setLanguage] = useState<Language>('en');
+    
+    // Preview State
+    const [previewImage, setPreviewImage] = useState<string | null>(null);
+    const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -22,7 +28,7 @@ const App: React.FC = () => {
             // Bilingual welcome message
             setMessages([{
                 role: MessageRole.MODEL,
-                text: 'Hello! I am ProcuBot, your expert procurement tutor. How can I assist you with your procurement challenges today?\n\n您好！我是 ProcuBot，您的專業採購導師。今天有什麼可以協助您的嗎？',
+                text: 'Hello! I am ProcuBot, your expert procurement tutor. I can analyze multiple documents (PDF, Excel, Images) simultaneously. How can I assist you today?\n\n您好！我是 ProcuBot，您的專業採購導師。我可以同時分析多份文件（如 PDF、Excel、圖片）。今天有什麼可以協助您的嗎？',
                 id: Date.now()
             }]);
         };
@@ -35,21 +41,16 @@ const App: React.FC = () => {
         }
     }, [messages]);
 
-    const handleSendMessage = async (text: string, attachment?: { mimeType: string; data: string; type: 'image' | 'audio' | 'document'; fileName?: string }) => {
+    const handleSendMessage = async (text: string, attachments: ChatAttachment[] = []) => {
         if (!chat || isLoading) return;
-        if (!text.trim() && !attachment) return;
+        if (!text.trim() && attachments.length === 0) return;
 
         // Construct User Message for UI
         const userMessage: ChatMessageType = { 
             role: MessageRole.USER, 
             text: text, 
             id: Date.now(),
-            attachment: attachment ? {
-                type: attachment.type,
-                mimeType: attachment.mimeType,
-                url: attachment.type === 'document' ? '' : `data:${attachment.mimeType};base64,${attachment.data}`,
-                fileName: attachment.fileName
-            } : undefined
+            attachments: attachments.length > 0 ? attachments : undefined
         };
 
         setMessages(prev => [...prev, userMessage]);
@@ -63,18 +64,25 @@ const App: React.FC = () => {
             // Construct request parts for Gemini
             let messageContent: any = text;
             
-            if (attachment) {
-                // If attachment exists, we must use an array of parts
+            if (attachments.length > 0) {
+                // If attachments exist, we must use an array of parts
                 const parts = [];
                 if (text) {
                     parts.push({ text: text });
                 }
-                parts.push({
-                    inlineData: {
-                        mimeType: attachment.mimeType,
-                        data: attachment.data
+                
+                // Add all attachments as inlineData parts
+                attachments.forEach(att => {
+                    if (att.base64Data) {
+                        parts.push({
+                            inlineData: {
+                                mimeType: att.mimeType,
+                                data: att.base64Data
+                            }
+                        });
                     }
                 });
+                
                 messageContent = parts;
             }
 
@@ -101,22 +109,75 @@ const App: React.FC = () => {
         }
     };
 
+    // Helper to handle attachment clicks
+    const handleAttachmentClick = (attachment: ChatAttachment) => {
+        if (attachment.type === 'image') {
+            // Priority: URL (from preview) -> Base64 (from history)
+            let src = attachment.url;
+            if (!src && attachment.base64Data) {
+                src = `data:${attachment.mimeType};base64,${attachment.base64Data}`;
+            }
+            if (src) {
+                setPreviewImage(src);
+                setIsPreviewOpen(true);
+            }
+        } else if (attachment.type === 'document' || attachment.type === 'audio') {
+            // Open documents in new tab
+            if (attachment.url && !attachment.url.startsWith('data:')) {
+                // If it's a blob URL (local preview)
+                window.open(attachment.url, '_blank');
+            } else if (attachment.base64Data) {
+                // Convert base64 to Blob and open
+                try {
+                    const byteCharacters = atob(attachment.base64Data);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let i = 0; i < byteCharacters.length; i++) {
+                        byteNumbers[i] = byteCharacters.charCodeAt(i);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    const blob = new Blob([byteArray], { type: attachment.mimeType });
+                    const blobUrl = URL.createObjectURL(blob);
+                    window.open(blobUrl, '_blank');
+                } catch (e) {
+                    console.error("Error opening document:", e);
+                    alert("Unable to open file.");
+                }
+            }
+        }
+    };
+
     return (
         // Changed h-screen to h-[100dvh] for mobile browser compatibility
-        <div className="flex flex-col h-[100dvh] bg-background text-text-primary font-sans">
+        <div className="flex flex-col h-[100dvh] bg-background text-text-primary font-sans transition-colors duration-300">
             <Header language={language} setLanguage={setLanguage} />
             
             <main ref={chatContainerRef} className="flex-grow overflow-y-auto p-4 md:p-6 space-y-6">
                 {messages.map((msg) => (
-                    <ChatMessage key={msg.id} message={msg} language={language} />
+                    <ChatMessage 
+                        key={msg.id} 
+                        message={msg} 
+                        language={language} 
+                        onAttachmentClick={handleAttachmentClick}
+                    />
                 ))}
             </main>
             
-            <footer className="flex-shrink-0 p-4 bg-background border-t border-surface/50">
+            <footer className="flex-shrink-0 p-4 bg-background border-t border-border-color shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
                 <div className="max-w-4xl mx-auto">
-                    <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} language={language} />
+                    <ChatInput 
+                        onSendMessage={handleSendMessage} 
+                        isLoading={isLoading} 
+                        language={language}
+                        onAttachmentClick={handleAttachmentClick}
+                    />
                 </div>
             </footer>
+
+            <ImagePreviewModal 
+                isOpen={isPreviewOpen} 
+                imageUrl={previewImage} 
+                onClose={() => setIsPreviewOpen(false)} 
+            />
         </div>
     );
 };

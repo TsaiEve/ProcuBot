@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
   <head>
@@ -10,15 +11,20 @@
         theme: {
           extend: {
             colors: {
-              'background': '#0F172A', // slate-900
-              'surface': '#1E293B', // slate-800
-              'model-bubble': '#334155', // slate-700
-              'user-bubble-start': '#3B82F6', // blue-500
-              'user-bubble-end': '#8B5CF6', // violet-500
-              'accent': '#22D3EE', // cyan-400
-              'text-primary': '#E2E8F0', // slate-200
-              'text-secondary': '#94A3B8', // slate-400
+              'background': '#F0F5FA', // Light blueish gray background
+              'surface': '#FFFFFF', // White surface
+              'model-bubble': '#FFFFFF', // White bubble for model
+              'user-bubble-start': '#2563EB', // Blue 600
+              'user-bubble-end': '#4F46E5', // Indigo 600
+              'accent': '#0284C7', // Sky 600 (Darker for light mode visibility)
+              'text-primary': '#1E293B', // Slate 800 (Dark text)
+              'text-secondary': '#64748B', // Slate 500
+              'border-color': '#E2E8F0', // Light border
             },
+            boxShadow: {
+              'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
+              'glow': '0 0 15px rgba(37, 99, 235, 0.15)',
+            }
           },
         },
       }
@@ -26,14 +32,14 @@
 <script type="importmap">
 {
   "imports": {
-    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1",
-    "remark-gfm": "https://aistudiocdn.com/remark-gfm@^4.0.1",
-    "react/": "https://aistudiocdn.com/react@^19.2.1/",
-    "react": "https://aistudiocdn.com/react@^19.2.1",
-    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.1/",
-    "react-markdown": "https://aistudiocdn.com/react-markdown@^10.1.0",
-    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.31.0",
-    "vite": "https://aistudiocdn.com/vite@^7.2.6"
+    "@google/genai": "https://esm.sh/@google/genai@^1.33.0",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-markdown": "https://esm.sh/react-markdown@^10.1.0",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
+    "vite": "https://esm.sh/vite@^7.2.7",
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.1"
   }
 }
 </script>
