@@ -1,6 +1,8 @@
 
+// Fix: Import React to resolve 'Cannot find namespace React' error when using React.FC
 import React, { useState, useEffect, useRef } from 'react';
-import type { Chat } from '@google/genai';
+// Fix: Use named imports for @google/genai and follow type extraction guidelines
+import { Chat, GenerateContentResponse } from '@google/genai';
 import { createChatSession } from './services/geminiService';
 import type { ChatMessage as ChatMessageType, Language, ChatAttachment } from './types';
 import { MessageRole } from './types';
@@ -28,7 +30,7 @@ const App: React.FC = () => {
             // Bilingual welcome message
             setMessages([{
                 role: MessageRole.MODEL,
-                text: 'Hello! I am ProcuBot, your expert procurement tutor. I can analyze multiple documents (PDF, Excel, Images) simultaneously. How can I assist you today?\n\n您好！我是 ProcuBot，您的專業採購導師。我可以同時分析多份文件（如 PDF、Excel、圖片）。今天有什麼可以協助您的嗎？',
+                text: 'Hello! I am ProcuBot, your expert procurement tutor. I can analyze multiple documents (PDF, Word, PPT, Excel, Images) simultaneously. How can I assist you today?\n\n您好！我是 ProcuBot，您的專業採購導師。我可以同時分析多份文件（如 PDF, Word, PPT, Excel, 圖片）。今天有什麼可以協助您的嗎？',
                 id: Date.now()
             }]);
         };
@@ -62,11 +64,11 @@ const App: React.FC = () => {
 
         try {
             // Construct request parts for Gemini
-            let messageContent: any = text;
+            let messagePayload: any = text;
             
             if (attachments.length > 0) {
-                // If attachments exist, we must use an array of parts
-                const parts = [];
+                // If attachments exist, we must use an object with a parts array
+                const parts: any[] = [];
                 if (text) {
                     parts.push({ text: text });
                 }
@@ -83,13 +85,15 @@ const App: React.FC = () => {
                     }
                 });
                 
-                messageContent = parts;
+                messagePayload = { parts };
             }
 
-            const stream = await chat.sendMessageStream({ message: messageContent });
+            const stream = await chat.sendMessageStream({ message: messagePayload });
             let streamedText = '';
             for await (const chunk of stream) {
-                const chunkText = chunk.text || '';
+                // Fix: Follow guidelines by casting chunk to GenerateContentResponse and using .text property
+                const c = chunk as GenerateContentResponse;
+                const chunkText = c.text || '';
                 streamedText += chunkText;
                 setMessages(prev => prev.map(msg => 
                     msg.id === botMessageId ? { ...msg, text: streamedText } : msg
@@ -98,8 +102,8 @@ const App: React.FC = () => {
         } catch (error) {
             console.error("Error sending message:", error);
             const errorMessage = language === 'en' 
-                ? 'Sorry, I encountered an error processing your request. Please try again.' 
-                : '抱歉，處理您的請求時發生錯誤，請重試。';
+                ? 'Sorry, I encountered an error processing your request. Please ensure the files are not too large and try again.' 
+                : '抱歉，處理您的請求時發生錯誤。請確保檔案不會太大並重試。';
 
             setMessages(prev => prev.map(msg => 
                 msg.id === botMessageId ? { ...msg, text: errorMessage } : msg
@@ -112,7 +116,6 @@ const App: React.FC = () => {
     // Helper to handle attachment clicks
     const handleAttachmentClick = (attachment: ChatAttachment) => {
         if (attachment.type === 'image') {
-            // Priority: URL (from preview) -> Base64 (from history)
             let src = attachment.url;
             if (!src && attachment.base64Data) {
                 src = `data:${attachment.mimeType};base64,${attachment.base64Data}`;
@@ -122,12 +125,9 @@ const App: React.FC = () => {
                 setIsPreviewOpen(true);
             }
         } else if (attachment.type === 'document' || attachment.type === 'audio') {
-            // Open documents in new tab
             if (attachment.url && !attachment.url.startsWith('data:')) {
-                // If it's a blob URL (local preview)
                 window.open(attachment.url, '_blank');
             } else if (attachment.base64Data) {
-                // Convert base64 to Blob and open
                 try {
                     const byteCharacters = atob(attachment.base64Data);
                     const byteNumbers = new Array(byteCharacters.length);
@@ -147,7 +147,6 @@ const App: React.FC = () => {
     };
 
     return (
-        // Changed h-screen to h-[100dvh] for mobile browser compatibility
         <div className="flex flex-col h-[100dvh] bg-background text-text-primary font-sans transition-colors duration-300">
             <Header language={language} setLanguage={setLanguage} />
             

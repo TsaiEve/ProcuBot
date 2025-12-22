@@ -88,13 +88,12 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
 
     const handlePreviewClick = (file: SelectedFile) => {
         if (onAttachmentClick) {
-            // Convert SelectedFile to temporary ChatAttachment for preview logic
             onAttachmentClick({
                 type: file.type === 'image' ? 'image' : 'document',
                 mimeType: file.file.type,
-                url: file.preview || URL.createObjectURL(file.file), // Use Blob URL for preview if no base64 preview exists
+                url: file.preview || URL.createObjectURL(file.file), 
                 fileName: file.file.name,
-                base64Data: '' // Not needed for local preview
+                base64Data: '' 
             });
         }
     };
@@ -156,7 +155,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
         e.preventDefault();
         
         if ((text.trim() || selectedFiles.length > 0) && !isLoading) {
-            // Process all selected files
             const attachments: ChatAttachment[] = await Promise.all(selectedFiles.map(async (f) => {
                 const base64Data = await convertBlobToBase64(f.file);
                 return {
@@ -164,7 +162,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
                     base64Data: base64Data,
                     type: f.type,
                     fileName: f.file.name,
-                    url: f.preview // Keep preview url for immediate UI display if needed
+                    url: f.preview 
                 };
             }));
 
@@ -183,7 +181,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
 
     return (
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-            {/* File Preview Area - Horizontal Scroll */}
             {selectedFiles.length > 0 && (
                 <div className="flex gap-2 overflow-x-auto pb-2 px-1 scrollbar-thin scrollbar-thumb-gray-300">
                     {selectedFiles.map((file) => (
@@ -226,11 +223,10 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
             )}
             
             <div className="flex items-end gap-3 bg-surface p-2 rounded-2xl border border-border-color shadow-sm focus-within:ring-2 focus-within:ring-accent/50 focus-within:border-accent transition-all duration-200">
-                {/* File Upload Button */}
                 <input 
                     type="file" 
                     multiple
-                    accept="image/*,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.openxmlformats-officedocument.presentationml.presentation" 
+                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" 
                     ref={fileInputRef} 
                     className="hidden" 
                     onChange={handleFileSelect}
@@ -258,7 +254,6 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
                     disabled={isLoading || isRecording}
                 />
                 
-                {/* Voice Record Button */}
                 <button
                     type="button"
                     onClick={isRecording ? stopRecording : startRecording}
