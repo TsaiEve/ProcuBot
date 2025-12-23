@@ -5,14 +5,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Procurement Pro Chat</title>
-    <!-- 合併為單一腳本標籤並包含 Typography 插件 -->
     <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              'background': '#F0F5FA',
+              'background': '#F4F7FA',
               'surface': '#FFFFFF',
               'model-bubble': '#FFFFFF',
               'user-bubble-start': '#2563EB',
@@ -23,41 +22,40 @@
               'border-color': '#E2E8F0',
             },
             boxShadow: {
-              'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
-              'glow': '0 0 15px rgba(37, 99, 235, 0.15)',
+              'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
             }
           },
         },
       }
     </script>
     <style type="text/css">
-      /* 強制修正表格文字顏色，解決「反白才看得到」的問題 */
+      /* 全域表格樣式修正 - 解決反白問題 */
       .prose table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 1rem 0;
-        color: #1E293B !important; /* 強制深色文字 */
+        border-collapse: collapse !important;
+        color: #1E293B !important;
+        background-color: white !important;
+        border: 1px solid #CBD5E1 !important;
       }
       .prose th {
-        background-color: #F1F5F9 !important;
-        font-weight: 700 !important;
+        background-color: #F8FAFC !important;
         color: #0F172A !important;
         border: 1px solid #CBD5E1 !important;
-        padding: 0.75rem !important;
+        padding: 10px !important;
+        font-weight: bold !important;
       }
       .prose td {
-        color: #334155 !important; /* 確保內容文字是深灰色 */
-        border: 1px solid #E2E8F0 !important;
-        padding: 0.75rem !important;
-        background-color: #FFFFFF !important;
-      }
-      /* 列表與粗體文字強化 */
-      .prose strong {
-        color: #0F172A !important;
-        font-weight: 800 !important;
-      }
-      .prose li {
         color: #334155 !important;
+        border: 1px solid #E2E8F0 !important;
+        padding: 10px !important;
+      }
+      .prose strong { color: #0F172A !important; }
+      .prose p { color: #334155 !important; }
+      .prose li { color: #334155 !important; }
+      
+      /* 選取文字時的高亮顏色 */
+      ::selection {
+        background-color: #BFDBFE;
+        color: #1E3A8A;
       }
     </style>
 <script type="importmap">
@@ -68,9 +66,9 @@
     "react": "https://esm.sh/react@^19.2.3",
     "react-markdown": "https://esm.sh/react-markdown@^10.1.0",
     "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.1",
     "@vitejs/plugin-react": "https://esm.sh/@vitejs/plugin-react@^5.1.2",
-    "vite": "https://esm.sh/vite@^7.2.7",
-    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.1"
+    "vite": "https://esm.sh/vite@^7.3.0"
   }
 }
 </script>

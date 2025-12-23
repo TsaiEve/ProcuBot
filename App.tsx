@@ -14,20 +14,30 @@ const App: React.FC = () => {
     const [messages, setMessages] = useState<ChatMessageType[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [language, setLanguage] = useState<Language>('zh-TW'); 
-    
     const [previewImage, setPreviewImage] = useState<string | null>(null);
     const [isPreviewOpen, setIsPreviewOpen] = useState(false);
 
     const chatContainerRef = useRef<HTMLDivElement>(null);
 
     const initializeChat = () => {
-        const newChat = createChatSession();
-        setChat(newChat);
-        setMessages([{
-            role: MessageRole.MODEL,
-            text: '您好！我是 ProcuBot，您的採購專家導師。我可以協助您分析採購策略、審閱報表或提供專業建議。目前支援上傳 **PDF** 或 **圖片** 檔案進行深入分析（若有 Word/Excel/PPT，請轉存為 PDF 後上傳）。今天有什麼可以協助您的嗎？\n\nHello! I am ProcuBot, your procurement mentor. I can help analyze strategies or review reports. I currently support **PDF** and **Image** uploads for analysis.',
-            id: Date.now()
-        }]);
+        try {
+            const newChat = createChatSession();
+            setChat(newChat);
+            setMessages([{
+                role: MessageRole.MODEL,
+                text: '您好！我是 ProcuBot，已切換至最穩定的連線模式。我可以協助您分析採購策略、審閱報表。目前支援 **PDF** 或 **圖片**。今天有什麼可以協助您的嗎？',
+                id: Date.now()
+            }]);
+        } catch (error: any) {
+            console.error("Initialization Error:", error);
+            setMessages([{
+                role: MessageRole.MODEL,
+                text: error.message === "API_KEY_MISSING" 
+                    ? "❌ **系統錯誤：找不到 API 金鑰**。請確保環境變數 API_KEY 已正確設定。" 
+                    : "❌ **系統初始化失敗**，請重新整理頁面或檢查網路連線。",
+                id: Date.now()
+            }]);
+        }
     };
 
     useEffect(() => {
@@ -59,7 +69,6 @@ const App: React.FC = () => {
 
         try {
             let messagePayload: any;
-
             if (attachments.length > 0) {
                 const parts: any[] = [];
                 if (text.trim()) parts.push({ text: text });
@@ -85,27 +94,24 @@ const App: React.FC = () => {
                 ));
             }
         } catch (error: any) {
-            console.error("Gemini API Error Details:", error);
-            
-            let userFriendlyError = "";
+            console.error("Gemini API Error:", error);
             const errorStr = String(error);
+            let errorMessage = "處理請求時發生技術錯誤。";
 
-            if (errorStr.includes("SAFETY") || errorStr.includes("safety")) {
-                userFriendlyError = language === 'en'
-                    ? "Your message was flagged by safety filters. Please try rephrasing your question to focus more on procurement strategies or formal professional advice."
-                    : "您的訊息可能觸發了安全性過濾器。請嘗試調整說法，將重點放在「採購策略」或「專業建議」的諮詢上，我會盡力協助您。";
-            } else if (errorStr.includes("MIME type")) {
-                userFriendlyError = language === 'en'
-                    ? "Unsupported file format. Please convert your documents to PDF or use images (PNG/JPG)."
-                    : "檔案格式不支援。請將文件轉存為 PDF 或使用圖片檔案（PNG/JPG）再試一次。";
+            if (errorStr.includes("429")) {
+                errorMessage = "⚠️ **發送頻率過高**：請稍等幾秒後再試。";
+            } else if (errorStr.includes("404")) {
+                errorMessage = "⚠️ **模型連線失敗**：當前區域可能不支援此模型，正嘗試重新建立連線。";
+            } else if (errorStr.includes("SAFETY")) {
+                errorMessage = "🛡️ **內容安全過濾**：您的訊息內容可能包含敏感詞彙，請嘗試以更專業、客觀的採購術語重新描述您的問題。";
+            } else if (errorStr.includes("API_KEY")) {
+                errorMessage = "❌ **API 金鑰失效**：請檢查您的 API Key 是否有效或專案是否已啟用服務。";
             } else {
-                userFriendlyError = language === 'en'
-                    ? "I encountered an error. This might be due to heavy traffic. Please try clicking the 'Reset' button at the top to start a fresh conversation."
-                    : "抱歉，API 回應發生錯誤（可能是負載過重）。請點擊上方「重置」按鈕開啟新對話再試一次。";
+                errorMessage = `抱歉，發生了未預期的錯誤 (Error: ${error.message || 'Unknown'})。請點擊上方「重置」按鈕。`;
             }
 
             setMessages(prev => prev.map(msg => 
-                msg.id === botMessageId ? { ...msg, text: userFriendlyError } : msg
+                msg.id === botMessageId ? { ...msg, text: errorMessage } : msg
             ));
         } finally {
             setIsLoading(false);
@@ -122,21 +128,19 @@ const App: React.FC = () => {
                 setPreviewImage(src);
                 setIsPreviewOpen(true);
             }
-        } else {
-            if (attachment.base64Data) {
-                try {
-                    const byteCharacters = atob(attachment.base64Data);
-                    const byteNumbers = new Array(byteCharacters.length);
-                    for (let i = 0; i < byteCharacters.length; i++) {
-                        byteNumbers[i] = byteCharacters.charCodeAt(i);
-                    }
-                    const byteArray = new Uint8Array(byteNumbers);
-                    const blob = new Blob([byteArray], { type: attachment.mimeType });
-                    const blobUrl = URL.createObjectURL(blob);
-                    window.open(blobUrl, '_blank');
-                } catch (e) {
-                    console.error("Error opening document:", e);
+        } else if (attachment.base64Data) {
+            try {
+                const byteCharacters = atob(attachment.base64Data);
+                const byteNumbers = new Array(byteCharacters.length);
+                for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
                 }
+                const byteArray = new Uint8Array(byteNumbers);
+                const blob = new Blob([byteArray], { type: attachment.mimeType });
+                const blobUrl = URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+            } catch (e) {
+                console.error("Error opening document:", e);
             }
         }
     };
@@ -144,7 +148,6 @@ const App: React.FC = () => {
     return (
         <div className="flex flex-col h-[100dvh] bg-background text-text-primary font-sans">
             <Header language={language} setLanguage={setLanguage} onReset={initializeChat} />
-            
             <main ref={chatContainerRef} className="flex-grow overflow-y-auto p-4 md:p-6 space-y-6">
                 {messages.map((msg) => (
                     <ChatMessage 
@@ -155,7 +158,6 @@ const App: React.FC = () => {
                     />
                 ))}
             </main>
-            
             <footer className="flex-shrink-0 p-4 bg-background border-t border-border-color">
                 <div className="max-w-4xl mx-auto">
                     <ChatInput 
@@ -166,12 +168,7 @@ const App: React.FC = () => {
                     />
                 </div>
             </footer>
-
-            <ImagePreviewModal 
-                isOpen={isPreviewOpen} 
-                imageUrl={previewImage} 
-                onClose={() => setIsPreviewOpen(false)} 
-            />
+            <ImagePreviewModal isOpen={isPreviewOpen} imageUrl={previewImage} onClose={() => setIsPreviewOpen(false)} />
         </div>
     );
 };
