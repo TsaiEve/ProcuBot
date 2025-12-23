@@ -13,7 +13,7 @@ interface SelectedFile {
     file: File;
     preview?: string;
     type: 'image' | 'document';
-    id: string; // Unique ID for removal
+    id: string; 
 }
 
 const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, language, onAttachmentClick }) => {
@@ -31,11 +31,14 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
         placeholder: language === 'en' 
             ? "Ask about procurement... (Ctrl + Enter to send)" 
             : "詢問關於採購的問題... (Ctrl + Enter 發送)",
-        uploadFile: language === 'en' ? "Upload Files" : "上傳檔案",
+        uploadFile: language === 'en' ? "Upload Files (PDF/Images)" : "上傳檔案 (PDF/圖片)",
         startRecording: language === 'en' ? "Record" : "錄音",
         stopRecording: language === 'en' ? "Stop" : "停止",
         audioMessage: language === 'en' ? "Please listen to this audio." : "請聽這段語音。",
         noMic: language === 'en' ? "No microphone found." : "找不到麥克風。",
+        unsupported: language === 'en' 
+            ? "Only PDF and Image files are currently supported for analysis." 
+            : "目前僅支援分析 PDF 與圖片檔案。"
     };
 
     useEffect(() => {
@@ -52,8 +55,15 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
             const newFiles: SelectedFile[] = [];
             Array.from(e.target.files).forEach((file: File) => {
                 const isImage = file.type.startsWith('image/');
+                const isPdf = file.type === 'application/pdf';
                 const id = Math.random().toString(36).substring(7);
                 
+                // Safety check for MIME types supported by inlineData
+                if (!isImage && !isPdf) {
+                    alert(`${t.unsupported} (${file.name})`);
+                    return;
+                }
+
                 if (isImage) {
                     const reader = new FileReader();
                     reader.onloadend = () => {
@@ -73,12 +83,10 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
                     });
                 }
             });
-            // Add non-image files immediately
             if (newFiles.length > 0) {
                 setSelectedFiles(prev => [...prev, ...newFiles]);
             }
         }
-        // Reset input value to allow selecting the same file again if needed
         if (fileInputRef.current) fileInputRef.current.value = '';
     };
 
@@ -201,7 +209,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
                                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
                                             <polyline points="14 2 14 8 20 8"></polyline>
                                         </svg>
-                                        <span className="text-[10px] w-full truncate text-center leading-tight">
+                                        <span className="text-[10px] w-full truncate text-center leading-tight px-1">
                                             {file.file.name}
                                         </span>
                                     </div>
@@ -226,7 +234,7 @@ const ChatInput: React.FC<ChatInputProps> = ({ onSendMessage, isLoading, languag
                 <input 
                     type="file" 
                     multiple
-                    accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation" 
+                    accept="image/*,application/pdf" 
                     ref={fileInputRef} 
                     className="hidden" 
                     onChange={handleFileSelect}

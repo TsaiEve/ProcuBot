@@ -5,21 +5,22 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Procurement Pro Chat</title>
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 合併為單一腳本標籤並包含 Typography 插件 -->
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
     <script>
       tailwind.config = {
         theme: {
           extend: {
             colors: {
-              'background': '#F0F5FA', // Light blueish gray background
-              'surface': '#FFFFFF', // White surface
-              'model-bubble': '#FFFFFF', // White bubble for model
-              'user-bubble-start': '#2563EB', // Blue 600
-              'user-bubble-end': '#4F46E5', // Indigo 600
-              'accent': '#0284C7', // Sky 600 (Darker for light mode visibility)
-              'text-primary': '#1E293B', // Slate 800 (Dark text)
-              'text-secondary': '#64748B', // Slate 500
-              'border-color': '#E2E8F0', // Light border
+              'background': '#F0F5FA',
+              'surface': '#FFFFFF',
+              'model-bubble': '#FFFFFF',
+              'user-bubble-start': '#2563EB',
+              'user-bubble-end': '#4F46E5',
+              'accent': '#0284C7',
+              'text-primary': '#1E293B',
+              'text-secondary': '#64748B',
+              'border-color': '#E2E8F0',
             },
             boxShadow: {
               'soft': '0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03)',
@@ -29,6 +30,36 @@
         },
       }
     </script>
+    <style type="text/css">
+      /* 強制修正表格文字顏色，解決「反白才看得到」的問題 */
+      .prose table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 1rem 0;
+        color: #1E293B !important; /* 強制深色文字 */
+      }
+      .prose th {
+        background-color: #F1F5F9 !important;
+        font-weight: 700 !important;
+        color: #0F172A !important;
+        border: 1px solid #CBD5E1 !important;
+        padding: 0.75rem !important;
+      }
+      .prose td {
+        color: #334155 !important; /* 確保內容文字是深灰色 */
+        border: 1px solid #E2E8F0 !important;
+        padding: 0.75rem !important;
+        background-color: #FFFFFF !important;
+      }
+      /* 列表與粗體文字強化 */
+      .prose strong {
+        color: #0F172A !important;
+        font-weight: 800 !important;
+      }
+      .prose li {
+        color: #334155 !important;
+      }
+    </style>
 <script type="importmap">
 {
   "imports": {
