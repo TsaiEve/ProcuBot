@@ -9,9 +9,14 @@ import ChatMessage from './components/ChatMessage';
 import ChatInput from './components/ChatInput';
 import ImagePreviewModal from './components/ImagePreviewModal';
 
+interface GroundingLink {
+    title: string;
+    uri: string;
+}
+
 const App: React.FC = () => {
     const [chat, setChat] = useState<Chat | null>(null);
-    const [messages, setMessages] = useState<ChatMessageType[]>([]);
+    const [messages, setMessages] = useState<(ChatMessageType & { sources?: GroundingLink[] })[]>([]);
     const [isLoading, setIsLoading] = useState(false);
     const [language, setLanguage] = useState<Language>('zh-TW'); 
     const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -25,16 +30,14 @@ const App: React.FC = () => {
             setChat(newChat);
             setMessages([{
                 role: MessageRole.MODEL,
-                text: '您好！我是 ProcuBot，已切換至最穩定的連線模式。我可以協助您分析採購策略、審閱報表。目前支援 **PDF** 或 **圖片**。今天有什麼可以協助您的嗎？',
+                text: '您好！我是 ProcuBot 2.0。我現在已配備 **Google 搜尋能力**，可以直接為您統整具體的供應商名單、市場行情與產業報告。您可以試著問我：「請推薦台灣北部專業的電子零件加工廠」或「分析目前不鏽鋼原料的供應商趨勢」。',
                 id: Date.now()
             }]);
         } catch (error: any) {
             console.error("Initialization Error:", error);
             setMessages([{
                 role: MessageRole.MODEL,
-                text: error.message === "API_KEY_MISSING" 
-                    ? "❌ **系統錯誤：找不到 API 金鑰**。請確保環境變數 API_KEY 已正確設定。" 
-                    : "❌ **系統初始化失敗**，請重新整理頁面或檢查網路連線。",
+                text: "❌ 系統初始化失敗，請檢查 API Key 設置。",
                 id: Date.now()
             }]);
         }
@@ -54,7 +57,7 @@ const App: React.FC = () => {
         if (!chat || isLoading) return;
         if (!text.trim() && attachments.length === 0) return;
 
-        const userMessage: ChatMessageType = { 
+        const userMessage = { 
             role: MessageRole.USER, 
             text: text, 
             id: Date.now(),
@@ -65,53 +68,44 @@ const App: React.FC = () => {
         setIsLoading(true);
 
         const botMessageId = Date.now() + 1;
-        setMessages(prev => [...prev, { role: MessageRole.MODEL, text: '', id: botMessageId }]);
+        setMessages(prev => [...prev, { role: MessageRole.MODEL, text: '', id: botMessageId, sources: [] }]);
 
         try {
-            let messagePayload: any;
-            if (attachments.length > 0) {
-                const parts: any[] = [];
-                if (text.trim()) parts.push({ text: text });
-                attachments.forEach(att => {
-                    if (att.base64Data) {
-                        parts.push({ inlineData: { mimeType: att.mimeType, data: att.base64Data } });
-                    }
-                });
-                messagePayload = parts;
-            } else {
-                messagePayload = text;
-            }
+            let messagePayload: any = attachments.length > 0 ? 
+                [{ text: text }, ...attachments.map(att => ({ inlineData: { mimeType: att.mimeType, data: att.base64Data } }))] : 
+                text;
 
             const stream = await chat.sendMessageStream({ message: messagePayload });
             let streamedText = '';
+            let finalSources: GroundingLink[] = [];
             
             for await (const chunk of stream) {
                 const c = chunk as GenerateContentResponse;
-                const chunkText = c.text || '';
-                streamedText += chunkText;
+                streamedText += (c.text || '');
+                
+                // 提取搜尋參考連結
+                const chunks = c.candidates?.[0]?.groundingMetadata?.groundingChunks;
+                if (chunks) {
+                    chunks.forEach((chunk: any) => {
+                        if (chunk.web && chunk.web.uri) {
+                            if (!finalSources.find(s => s.uri === chunk.web.uri)) {
+                                finalSources.push({
+                                    title: chunk.web.title || 'Source',
+                                    uri: chunk.web.uri
+                                });
+                            }
+                        }
+                    });
+                }
+
                 setMessages(prev => prev.map(msg => 
-                    msg.id === botMessageId ? { ...msg, text: streamedText } : msg
+                    msg.id === botMessageId ? { ...msg, text: streamedText, sources: finalSources } : msg
                 ));
             }
         } catch (error: any) {
             console.error("Gemini API Error:", error);
-            const errorStr = String(error);
-            let errorMessage = "處理請求時發生技術錯誤。";
-
-            if (errorStr.includes("429")) {
-                errorMessage = "⚠️ **發送頻率過高**：請稍等幾秒後再試。";
-            } else if (errorStr.includes("404")) {
-                errorMessage = "⚠️ **模型連線失敗**：當前區域可能不支援此模型，正嘗試重新建立連線。";
-            } else if (errorStr.includes("SAFETY")) {
-                errorMessage = "🛡️ **內容安全過濾**：您的訊息內容可能包含敏感詞彙，請嘗試以更專業、客觀的採購術語重新描述您的問題。";
-            } else if (errorStr.includes("API_KEY")) {
-                errorMessage = "❌ **API 金鑰失效**：請檢查您的 API Key 是否有效或專案是否已啟用服務。";
-            } else {
-                errorMessage = `抱歉，發生了未預期的錯誤 (Error: ${error.message || 'Unknown'})。請點擊上方「重置」按鈕。`;
-            }
-
             setMessages(prev => prev.map(msg => 
-                msg.id === botMessageId ? { ...msg, text: errorMessage } : msg
+                msg.id === botMessageId ? { ...msg, text: `抱歉，搜尋過程中發生錯誤：${error.message}` } : msg
             ));
         } finally {
             setIsLoading(false);
@@ -120,28 +114,9 @@ const App: React.FC = () => {
 
     const handleAttachmentClick = (attachment: ChatAttachment) => {
         if (attachment.type === 'image') {
-            let src = attachment.url;
-            if (!src && attachment.base64Data) {
-                src = `data:${attachment.mimeType};base64,${attachment.base64Data}`;
-            }
-            if (src) {
-                setPreviewImage(src);
-                setIsPreviewOpen(true);
-            }
-        } else if (attachment.base64Data) {
-            try {
-                const byteCharacters = atob(attachment.base64Data);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], { type: attachment.mimeType });
-                const blobUrl = URL.createObjectURL(blob);
-                window.open(blobUrl, '_blank');
-            } catch (e) {
-                console.error("Error opening document:", e);
-            }
+            const src = attachment.url || `data:${attachment.mimeType};base64,${attachment.base64Data}`;
+            setPreviewImage(src);
+            setIsPreviewOpen(true);
         }
     };
 
@@ -155,17 +130,13 @@ const App: React.FC = () => {
                         message={msg} 
                         language={language} 
                         onAttachmentClick={handleAttachmentClick}
+                        sources={msg.sources}
                     />
                 ))}
             </main>
             <footer className="flex-shrink-0 p-4 bg-background border-t border-border-color">
                 <div className="max-w-4xl mx-auto">
-                    <ChatInput 
-                        onSendMessage={handleSendMessage} 
-                        isLoading={isLoading} 
-                        language={language}
-                        onAttachmentClick={handleAttachmentClick}
-                    />
+                    <ChatInput onSendMessage={handleSendMessage} isLoading={isLoading} language={language} />
                 </div>
             </footer>
             <ImagePreviewModal isOpen={isPreviewOpen} imageUrl={previewImage} onClose={() => setIsPreviewOpen(false)} />
