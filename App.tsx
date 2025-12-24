@@ -30,14 +30,14 @@ const App: React.FC = () => {
             setChat(newChat);
             setMessages([{
                 role: MessageRole.MODEL,
-                text: '您好！我是 ProcuBot 2.0。我現在已配備 **Google 搜尋能力**，可以直接為您統整具體的供應商名單、市場行情與產業報告。您可以試著問我：「請推薦台灣北部專業的電子零件加工廠」或「分析目前不鏽鋼原料的供應商趨勢」。',
+                text: '您好！我是 ProcuBot 2.0。我現在具備 **Google 搜尋與市場統整能力**。您可以直接要求我提供具體的供應商名單或價格趨勢。\n\n*註：若我回應「額度已滿」，代表 Google 免費 API 限制了每分鐘的搜尋次數，請稍等一分鐘後再試。*',
                 id: Date.now()
             }]);
         } catch (error: any) {
             console.error("Initialization Error:", error);
             setMessages([{
                 role: MessageRole.MODEL,
-                text: "❌ 系統初始化失敗，請檢查 API Key 設置。",
+                text: "❌ 系統初始化失敗，請檢查環境變數 API_KEY 是否正確。",
                 id: Date.now()
             }]);
         }
@@ -83,7 +83,6 @@ const App: React.FC = () => {
                 const c = chunk as GenerateContentResponse;
                 streamedText += (c.text || '');
                 
-                // 提取搜尋參考連結
                 const chunks = c.candidates?.[0]?.groundingMetadata?.groundingChunks;
                 if (chunks) {
                     chunks.forEach((chunk: any) => {
@@ -104,8 +103,19 @@ const App: React.FC = () => {
             }
         } catch (error: any) {
             console.error("Gemini API Error:", error);
+            const errorStr = String(error);
+            let userFriendlyError = "";
+
+            if (errorStr.includes("429") || errorStr.includes("RESOURCE_EXHAUSTED")) {
+                userFriendlyError = "⚠️ **API 配額暫時用盡 (429 Error)**\n\n由於 Google 免費版 API 對於「Google 搜尋功能」有較嚴格的次數限制，目前的請求次數已達上限。\n\n**解決辦法：**\n1. 請等待 **60 秒** 後再重新發送訊息。\n2. 嘗試簡化您的問題，或分次詢問。\n3. 如果您有付費帳戶，請確保使用的是正確的 API Key。";
+            } else if (errorStr.includes("500")) {
+                userFriendlyError = "伺服器忙碌中，請稍後再試。";
+            } else {
+                userFriendlyError = `抱歉，發生了錯誤：${error.message || '未知錯誤'}`;
+            }
+
             setMessages(prev => prev.map(msg => 
-                msg.id === botMessageId ? { ...msg, text: `抱歉，搜尋過程中發生錯誤：${error.message}` } : msg
+                msg.id === botMessageId ? { ...msg, text: userFriendlyError } : msg
             ));
         } finally {
             setIsLoading(false);
